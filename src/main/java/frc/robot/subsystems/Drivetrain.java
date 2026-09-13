@@ -7,7 +7,6 @@ package frc.robot.subsystems;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.util.sendable.SendableRegistry;
-import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
@@ -36,9 +35,6 @@ public class Drivetrain extends SubsystemBase {
   // Set up the RomiGyro
   private final RomiGyro gyro = new RomiGyro();
 
-  // Set up the BuiltInAccelerometer
-  private final BuiltInAccelerometer accelerometer = new BuiltInAccelerometer();
-
   /** Creates a new Drivetrain. */
   public Drivetrain() {
     SendableRegistry.addChild(differentialDrive, leftMotor);
@@ -65,14 +61,6 @@ public class Drivetrain extends SubsystemBase {
     rightEncoder.reset();
   }
 
-  public int getLeftEncoderCount() {
-    return leftEncoder.get();
-  }
-
-  public int getRightEncoderCount() {
-    return rightEncoder.get();
-  }
-
   public double getLeftDistanceInch() {
     return leftEncoder.getDistance();
   }
@@ -85,59 +73,6 @@ public class Drivetrain extends SubsystemBase {
     return (getLeftDistanceInch() + getRightDistanceInch()) / 2.0;
   }
 
-  /**
-   * The acceleration in the X-axis.
-   *
-   * @return The acceleration of the Romi along the X-axis in Gs
-   */
-  public double getAccelX() {
-    return accelerometer.getX();
-  }
-
-  /**
-   * The acceleration in the Y-axis.
-   *
-   * @return The acceleration of the Romi along the Y-axis in Gs
-   */
-  public double getAccelY() {
-    return accelerometer.getY();
-  }
-
-  /**
-   * The acceleration in the Z-axis.
-   *
-   * @return The acceleration of the Romi along the Z-axis in Gs
-   */
-  public double getAccelZ() {
-    return accelerometer.getZ();
-  }
-
-  /**
-   * Current angle of the Romi around the X-axis.
-   *
-   * @return The current angle of the Romi in degrees
-   */
-  public double getGyroAngleX() {
-    return gyro.getAngleX();
-  }
-
-  /**
-   * Current angle of the Romi around the Y-axis.
-   *
-   * @return The current angle of the Romi in degrees
-   */
-  public double getGyroAngleY() {
-    return gyro.getAngleY();
-  }
-
-  /**
-   * Current angle of the Romi around the Z-axis.
-   *
-   * @return The current angle of the Romi in degrees
-   */
-  public double getGyroAngleZ() {
-    return gyro.getAngleZ();
-  }
 
   /** Reset the gyro. */
   public void resetGyro() {
