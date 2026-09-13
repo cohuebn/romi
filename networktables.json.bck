@@ -1,0 +1,10 @@
+[
+  {
+    "name": "/Preferences/debug",
+    "type": "boolean",
+    "value": false,
+    "properties": {
+      "persistent": true
+    }
+  }
+]
