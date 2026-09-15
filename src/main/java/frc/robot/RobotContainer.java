@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.romi.OnBoardIO.ChannelMode;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 /**
@@ -56,6 +55,16 @@ public class RobotContainer {
   }
 
   /**
+   * Use this to pass the teleop command to the main {@link Robot} class.
+   *
+   * @return the command to run in teleop
+   */
+  public Command getArcadeDriveCommand() {
+    return new ArcadeDrive(
+        drivetrain, () -> -controller.getLeftY(), () -> -controller.getRightX());
+  }
+
+  /**
    * Use this method to define your button->command mappings. Buttons can be created by
    * instantiating a {@link GenericHID} or one of its subclasses ({@link
    * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
@@ -83,15 +92,5 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return autonomousModeChooser.getSelected();
-  }
-
-  /**
-   * Use this to pass the teleop command to the main {@link Robot} class.
-   *
-   * @return the command to run in teleop
-   */
-  public Command getArcadeDriveCommand() {
-    return new ArcadeDrive(
-        drivetrain, () -> -controller.getLeftY(), () -> -controller.getRightX());
   }
 }

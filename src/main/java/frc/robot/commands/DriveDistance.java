@@ -5,12 +5,14 @@
 package frc.robot.commands;
 
 import frc.robot.subsystems.Drivetrain;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj2.command.Command;
 
 public class DriveDistance extends Command {
-  private final Drivetrain m_drive;
-  private final double m_distance;
-  private final double m_speed;
+  private final Drivetrain drivetrain;
+  private final Distance distance;
+  private final double speed;
 
   /**
    * Creates a new DriveDistance. This command will drive your your robot for a desired distance at
@@ -18,38 +20,38 @@ public class DriveDistance extends Command {
    *
    * @param speed The speed at which the robot will drive
    * @param inches The number of inches the robot will drive
-   * @param drive The drivetrain subsystem on which this command will run
+   * @param drivetrain The drivetrain subsystem on which this command will run
    */
-  public DriveDistance(double speed, double inches, Drivetrain drive) {
-    m_distance = inches;
-    m_speed = speed;
-    m_drive = drive;
-    addRequirements(drive);
+  public DriveDistance(double speed, Distance distance, Drivetrain drivetrain) {
+    this.distance = distance;
+    this.speed = speed;
+    this.drivetrain = drivetrain;
+    addRequirements(drivetrain);
   }
 
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    m_drive.arcadeDrive(0, 0);
-    m_drive.resetEncoders();
+    drivetrain.arcadeDriveVelocity(0, 0);
+    drivetrain.resetEncoders();
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    m_drive.arcadeDrive(m_speed, 0);
+    drivetrain.arcadeDriveVelocity(speed, 0);
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
-    m_drive.arcadeDrive(0, 0);
+    drivetrain.arcadeDriveVelocity(0, 0);
   }
 
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
     // Compare distance travelled from start to desired distance
-    return Math.abs(m_drive.getAverageDistanceInch()) >= m_distance;
+    return drivetrain.getAverageDistance().abs(Units.Inches) >= this.distance.in(Units.Inches);
   }
 }
