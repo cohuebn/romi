@@ -4,6 +4,11 @@
 
 package frc.robot;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -17,6 +22,20 @@ public class Robot extends TimedRobot {
   private Command autonomousCommand;
   private final RobotContainer robotContainer;
 
+  /** Log telemetry data to the temp directory */
+  private void setupFileLogging() {
+    String tempDirectory = System.getProperty("java.io.tmpdir");
+    Path logsDirectory = Path.of(tempDirectory, "romi");
+    try {
+      Files.createDirectories(logsDirectory);
+      DataLogManager.start(logsDirectory.toString());
+    }
+    catch (IOException e) {
+      System.err.println("Failed to initialize file logging; no logs will be written to file(s)");
+      e.printStackTrace();
+    }
+  }
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -25,6 +44,8 @@ public class Robot extends TimedRobot {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
+    // Comment/uncomment to control whether or not logs are written out to files for telemetry data
+    setupFileLogging();
   }
 
   /**
@@ -53,10 +74,8 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    // Get selected routine from the SmartDashboard
+    // Get selected routine from the SmartDashboard and schedule it if one is selected
     autonomousCommand = robotContainer.getAutonomousCommand();
-
-    // schedule the autonomous command (example)
     if (autonomousCommand != null) {
       CommandScheduler.getInstance().schedule(autonomousCommand);
     }

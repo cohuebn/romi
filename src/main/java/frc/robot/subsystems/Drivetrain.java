@@ -4,28 +4,27 @@
 
 package frc.robot.subsystems;
 
-import static edu.wpi.first.units.Units.InchesPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.util.sendable.SendableRegistry;
 import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.romi.RomiGyro;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 import frc.robot.settings.RobotSettings;
-import frc.robot.utilities.Constraints;
 
 public class Drivetrain extends SubsystemBase {
   private static final double encoderCountsPerWheelRevolution = 1440.0;
   private static final Distance wheelDiameter = Units.Millimeter.of(70); // 2.75591 in.
-  // Theoretical max velocity of Romi at full charge
-  private static final LinearVelocity maxVelocity = InchesPerSecond.of(35);
 
   // The Romi has the left and right motors set to
   // PWM channels 0 and 1 respectively
@@ -37,11 +36,22 @@ public class Drivetrain extends SubsystemBase {
   private final Encoder leftEncoder = new Encoder(4, 5);
   private final Encoder rightEncoder = new Encoder(6, 7);
 
-  // Set up the differential drive controller
-  // private final DifferentialDrive differentialDrive = new DifferentialDrive(leftMotor::set, rightMotor::set);
-
   // Set up the RomiGyro
   private final RomiGyro gyro = new RomiGyro();
+
+  // The feed-forward controllers are used to preemptively determine voltage
+  private final double voltsToOvercomeStaticFriction = 0.75;
+  private final double voltsPerAcceleratingInchPerSecond = 0.15;
+  private final SimpleMotorFeedforward leftMotorFeedForward = new SimpleMotorFeedforward(voltsToOvercomeStaticFriction,
+      voltsPerAcceleratingInchPerSecond);
+  private final SimpleMotorFeedforward rightMotorFeedForward = new SimpleMotorFeedforward(voltsToOvercomeStaticFriction,
+      voltsPerAcceleratingInchPerSecond);
+
+  // The PID controllers are used to account for differences in left/right motor
+  // powers to allow automatic correction based on distances reported by the
+  // encoders
+  private final PIDController leftMotorPID = new PIDController(0.02, 0.0, 0.0);
+  private final PIDController rightMotorPID = new PIDController(0.02, 0.0, 0.0);
 
   public void resetEncoders() {
     leftEncoder.reset();
@@ -53,17 +63,12 @@ public class Drivetrain extends SubsystemBase {
     rightMotorPID.reset();
   }
 
-  // The PID controllers are used to account for differences in left/right motor
-  // powers
-  // to allow automatic correction based on distances reported by the encoders
-  // TODO - tune PID controller values
-  private final PIDController leftMotorPID = new PIDController(0.02, 0.0, 0.0);
-  private final PIDController rightMotorPID = new PIDController(0.02, 0.0, 0.0);
-
   /** Creates a new Drivetrain. */
   public Drivetrain() {
-    // SendableRegistry.addChild(differentialDrive, leftMotor);
-    // SendableRegistry.addChild(differentialDrive, rightMotor);
+    SendableRegistry.add(leftEncoder, "Left Motor Encoder");
+    SendableRegistry.add(rightEncoder, "Right Motor Encoder");
+    SendableRegistry.add(leftMotorPID, "Left Motor PID");
+    SendableRegistry.add(rightMotorPID, "Right Motor PID");
 
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
@@ -78,10 +83,6 @@ public class Drivetrain extends SubsystemBase {
     resetEncoders();
   }
 
-  // public void arcadeDrive(double xAxisSpeed, double zAxisRotate) {
-  //   differentialDrive.arcadeDrive(xAxisSpeed, zAxisRotate);
-  // }
-
   /**
    * Using a target velocity from a controller and recorded velocities from the
    * encoders,
@@ -92,26 +93,33 @@ public class Drivetrain extends SubsystemBase {
     double leftMeasuredVelocity = leftEncoder.getRate();
     double rightMeasuredVelocity = rightEncoder.getRate();
 
-    // PID calculates the motor output needed to reach the desired velocity.
-    double leftOutput = leftMotorPID.calculate(leftMeasuredVelocity, desiredLeftVelocity);
-    double rightOutput = rightMotorPID.calculate(rightMeasuredVelocity, desiredRightVelocity);
+    // PID calculates offsets between desired and actual velocities
+    double leftPIDCorrection = leftMotorPID.calculate(leftMeasuredVelocity, desiredLeftVelocity);
+    double rightPIDCorrection = rightMotorPID.calculate(rightMeasuredVelocity, desiredRightVelocity);
 
-    // Keep the motor commands within the valid range.
-    leftOutput = Constraints.clamp(leftOutput, -1.0, 1.0);
-    leftMotor.set(leftOutput);
-    rightOutput = Constraints.clamp(rightOutput, -1.0, 1.0);
-    rightMotor.set(rightOutput);
+    // Use the feed-forward to estimate volts needed to hit desired velocity; use
+    // the PID correction to account for non-modeled voltage changes needed
+    double leftVolts = leftMotorFeedForward.calculate(desiredLeftVelocity) + leftPIDCorrection;
+    double rightVolts = rightMotorFeedForward.calculate(desiredRightVelocity) + rightPIDCorrection;
+
+    leftMotor.setVoltage(leftVolts);
+    rightMotor.setVoltage(rightVolts);
   }
 
   private double normalizeArcadeInput(double input) {
-    return MathUtil.applyDeadband(Math.pow(input, 2), 0.02);
+    // Squaring input gives finer control at small values
+    double squaredInput = Math.pow(input, 2);
+    // Deadband prevents joystick drift from moving motors
+    double withDeadbandApplied = MathUtil.applyDeadband(squaredInput, 0.02);
+    // Preserve the direction of the input
+    return input < 0 ? -withDeadbandApplied : withDeadbandApplied;
   }
 
   /** Convert joystick/controller values into desired wheel velocities */
   public void arcadeDriveVelocity(double xAxisSpeed, double zAxisRotate) {
-    double maxVelocityMeasure = maxVelocity.in(Units.InchesPerSecond);
     double xAxisSpeedWithDeaband = normalizeArcadeInput(xAxisSpeed);
     double zAxisRotateWithDeaband = normalizeArcadeInput(zAxisRotate);
+    double maxVelocityMeasure = Constants.maxDrivetrainVelocity.in(Constants.drivetrainVelocityUnit);
     double leftVelocity = (xAxisSpeedWithDeaband + zAxisRotateWithDeaband) * maxVelocityMeasure;
     double rightVelocity = (xAxisSpeedWithDeaband - zAxisRotateWithDeaband) * maxVelocityMeasure;
 
@@ -129,8 +137,39 @@ public class Drivetrain extends SubsystemBase {
     driveAtDesiredVelocity(leftVelocity, rightVelocity);
   }
 
+  /**
+   * Normally, you wouldn't use this method to directly set voltage on motors. However,
+   * for controller calibration, it is often useful to set left/right motor voltages
+   * directly and observe results
+   */
+  public void setMotorVoltage(Voltage leftVoltage, Voltage rightVoltage) {
+    leftMotor.setVoltage(leftVoltage.abs(Volts));
+    rightMotor.setVoltage(rightVoltage.abs(Volts));
+  }
+
+  public void stop() {
+    driveAtDesiredVelocity(0, 0);
+  }
+
+  // Encoder properties used for observability in commands for controllers, tuning, etc.
+  public LinearVelocity getLeftEncoderRate() {
+    return Constants.drivetrainVelocityUnit.of(leftEncoder.getRate());
+  }
+
+  public double getLeftEncoderRateAsDouble() {
+    return leftEncoder.getRate();
+  }
+
   public Distance getLeftDistance() {
     return Units.Inches.of(leftEncoder.getDistance());
+  }
+
+  public LinearVelocity getRightEncoderRate() {
+    return Constants.drivetrainVelocityUnit.of(rightEncoder.getRate());
+  }
+
+  public double getRightEncoderRateAsDouble() {
+    return rightEncoder.getRate();
   }
 
   public Distance getRightDistance() {
@@ -150,20 +189,28 @@ public class Drivetrain extends SubsystemBase {
    * Record useful encoder measurements for observing and tuning
    */
   private void recordEncoderMeasurements() {
-    SmartDashboard.putNumber("leftEncoderDistanceInches", getLeftDistance().in(Units.Inches));
-    SmartDashboard.putNumber("rightEncoderDistanceInches", getRightDistance().in(Units.Inches));
-    double leftEncoderRate = leftEncoder.getRate();
-    SmartDashboard.putNumber("leftEncoderRate", leftEncoderRate);
-    double rightEncoderRate = leftEncoder.getRate();
-    SmartDashboard.putNumber("rightEncoderRate", rightEncoderRate);
+    // SmartDashboard.putNumber("leftEncoderDistanceInches",
+    // getLeftDistance().in(Units.Inches));
+    // SmartDashboard.putNumber("rightEncoderDistanceInches",
+    // getRightDistance().in(Units.Inches));
+    // SmartDashboard.putNumber("leftEncoderRate", leftEncoderRate);
+    // SmartDashboard.putNumber("rightEncoderRate", rightEncoderRate);
     // A difference of zero would indicate both wheels move at the same rate
+    SmartDashboard.putData(leftEncoder);
+    SmartDashboard.putData(leftMotorPID);
+    SmartDashboard.putData(rightEncoder);
+    SmartDashboard.putData(rightMotorPID);
+    double leftEncoderRate = leftEncoder.getRate();
+    double rightEncoderRate = rightEncoder.getRate();
     SmartDashboard.putNumber("encoderRateDifference", leftEncoderRate - rightEncoderRate);
+    SmartDashboard.putNumber("leftMotorVoltage", leftMotor.getVoltage());
+    SmartDashboard.putNumber("rightMotorVoltage", rightMotor.getVoltage());
   }
 
   @Override
   public void periodic() {
-    // Only record encoder measurements in debug mode to avoid latency outside of
-    // debugging
+    // Only record encoder measurements in debug mode to avoid added latency outside
+    // of debugging
     if (RobotSettings.debugEnabled()) {
       recordEncoderMeasurements();
     }

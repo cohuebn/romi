@@ -4,12 +4,31 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Volts;
+
+import edu.wpi.first.units.LinearVelocityUnit;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.Voltage;
+
 /**
- * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
- * constants. This class should not be used for any other purpose. All constants should be declared
+ * The Constants class provides a convenient place for teams to hold robot-wide
+ * numerical or boolean
+ * constants. This class should not be used for any other purpose. All constants
+ * should be declared
  * globally (i.e. public static). Do not put anything functional in this class.
  *
- * <p>It is advised to statically import this class (or one of its inner classes) wherever the
+ * <p>
+ * It is advised to statically import this class (or one of its inner classes)
+ * wherever the
  * constants are needed, to reduce verbosity.
  */
-public final class Constants {}
+public final class Constants {
+    public static final LinearVelocityUnit drivetrainVelocityUnit = Units.InchesPerSecond;
+    // Theoretical max velocity of Romi at full charge
+    public static final LinearVelocity maxDrivetrainVelocity = drivetrainVelocityUnit.of(25);
+    // Max voltage to feed to the Romi; the Romi supports a maximum voltage of 10.8V. However, not going
+    // quite that high to keep things the nominal safe range of voltage for the system. This also is the
+    // max voltage the rechargable AA batteries can achieve
+    public static final Voltage maxDrivetrainVoltage = Volts.of(7.2);
+}
