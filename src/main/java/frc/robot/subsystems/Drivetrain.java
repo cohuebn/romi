@@ -40,18 +40,23 @@ public class Drivetrain extends SubsystemBase {
   private final RomiGyro gyro = new RomiGyro();
 
   // The feed-forward controllers are used to preemptively determine voltage
-  private final double voltsToOvercomeStaticFriction = 0.75;
-  private final double voltsPerAcceleratingInchPerSecond = 0.15;
-  private final SimpleMotorFeedforward leftMotorFeedForward = new SimpleMotorFeedforward(voltsToOvercomeStaticFriction,
-      voltsPerAcceleratingInchPerSecond);
-  private final SimpleMotorFeedforward rightMotorFeedForward = new SimpleMotorFeedforward(voltsToOvercomeStaticFriction,
-      voltsPerAcceleratingInchPerSecond);
+  private final SimpleMotorFeedforward leftMotorFeedForward = new SimpleMotorFeedforward(
+      Constants.leftMotorFeedForwardKS, Constants.leftMotorFeedForwardKV);
+  private final SimpleMotorFeedforward rightMotorFeedForward = new SimpleMotorFeedforward(
+      Constants.rightMotorFeedForwardKS,
+      Constants.rightMotorFeedForwardKV);
 
   // The PID controllers are used to account for differences in left/right motor
   // powers to allow automatic correction based on distances reported by the
   // encoders
-  private final PIDController leftMotorPID = new PIDController(0.02, 0.0, 0.0);
-  private final PIDController rightMotorPID = new PIDController(0.02, 0.0, 0.0);
+  private final PIDController leftMotorPID = new PIDController(0.1, 0.0, 0.001);
+  private final PIDController rightMotorPID = new PIDController(0.1, 0.0, 0.001);
+
+  // Desired velocity measurements are useful to see how well the controllers are
+  // matching
+  // the expected outcome
+  private LinearVelocity latestLeftMotorDesiredVelocity;
+  private LinearVelocity latestRightMotorDesiredVelocity;
 
   public void resetEncoders() {
     leftEncoder.reset();
@@ -89,6 +94,10 @@ public class Drivetrain extends SubsystemBase {
    * determine how much power to give each motor to achieve the desired velocity
    */
   public void driveAtDesiredVelocity(double desiredLeftVelocity, double desiredRightVelocity) {
+    // Store desired velocities for later telemetry recording
+    latestLeftMotorDesiredVelocity = Constants.drivetrainVelocityUnit.of(desiredLeftVelocity);
+    latestRightMotorDesiredVelocity = Constants.drivetrainVelocityUnit.of(desiredRightVelocity);
+
     // Current measured wheel velocities.
     double leftMeasuredVelocity = leftEncoder.getRate();
     double rightMeasuredVelocity = rightEncoder.getRate();
@@ -138,20 +147,23 @@ public class Drivetrain extends SubsystemBase {
   }
 
   /**
-   * Normally, you wouldn't use this method to directly set voltage on motors. However,
-   * for controller calibration, it is often useful to set left/right motor voltages
+   * Normally, you wouldn't use this method to directly set voltage on motors.
+   * However,
+   * for controller calibration, it is often useful to set left/right motor
+   * voltages
    * directly and observe results
    */
   public void setMotorVoltage(Voltage leftVoltage, Voltage rightVoltage) {
-    leftMotor.setVoltage(leftVoltage.abs(Volts));
-    rightMotor.setVoltage(rightVoltage.abs(Volts));
+    leftMotor.setVoltage(leftVoltage.in(Volts));
+    rightMotor.setVoltage(rightVoltage.in(Volts));
   }
 
   public void stop() {
     driveAtDesiredVelocity(0, 0);
   }
 
-  // Encoder properties used for observability in commands for controllers, tuning, etc.
+  // Encoder properties used for observability in commands for controllers,
+  // tuning, etc.
   public LinearVelocity getLeftEncoderRate() {
     return Constants.drivetrainVelocityUnit.of(leftEncoder.getRate());
   }
@@ -185,24 +197,22 @@ public class Drivetrain extends SubsystemBase {
     gyro.reset();
   }
 
+  private void recordOptionalVelocity(String key, LinearVelocity velocity) {
+    if (velocity != null) {
+      SmartDashboard.putNumber(key, velocity.in(Constants.drivetrainVelocityUnit));
+    }
+  }
+
   /**
    * Record useful encoder measurements for observing and tuning
    */
-  private void recordEncoderMeasurements() {
-    // SmartDashboard.putNumber("leftEncoderDistanceInches",
-    // getLeftDistance().in(Units.Inches));
-    // SmartDashboard.putNumber("rightEncoderDistanceInches",
-    // getRightDistance().in(Units.Inches));
-    // SmartDashboard.putNumber("leftEncoderRate", leftEncoderRate);
-    // SmartDashboard.putNumber("rightEncoderRate", rightEncoderRate);
-    // A difference of zero would indicate both wheels move at the same rate
+  private void recordMeasurements() {
     SmartDashboard.putData(leftEncoder);
     SmartDashboard.putData(leftMotorPID);
     SmartDashboard.putData(rightEncoder);
     SmartDashboard.putData(rightMotorPID);
-    double leftEncoderRate = leftEncoder.getRate();
-    double rightEncoderRate = rightEncoder.getRate();
-    SmartDashboard.putNumber("encoderRateDifference", leftEncoderRate - rightEncoderRate);
+    recordOptionalVelocity("latestLeftMotorDesiredVelocity", latestLeftMotorDesiredVelocity);
+    recordOptionalVelocity("latestRightMotorDesiredVelocity", latestRightMotorDesiredVelocity);
     SmartDashboard.putNumber("leftMotorVoltage", leftMotor.getVoltage());
     SmartDashboard.putNumber("rightMotorVoltage", rightMotor.getVoltage());
   }
@@ -212,7 +222,7 @@ public class Drivetrain extends SubsystemBase {
     // Only record encoder measurements in debug mode to avoid added latency outside
     // of debugging
     if (RobotSettings.debugEnabled()) {
-      recordEncoderMeasurements();
+      recordMeasurements();
     }
   }
 }

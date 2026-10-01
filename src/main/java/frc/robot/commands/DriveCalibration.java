@@ -9,6 +9,7 @@ import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
@@ -33,11 +34,15 @@ public class DriveCalibration extends Command {
     private Instant calibrationStepStartTime;
     private Duration calibrationStepDuration;
     private DriveCalibrationPhase calibrationPhase;
+    private DescriptiveStatistics leftMotorStatistics;
+    private DescriptiveStatistics rightMotorStatistics;
 
     public DriveCalibration(Voltage voltageStep, Duration calibrationStepDuration, Drivetrain drivetrain) {
         this.voltageStep = voltageStep;
         this.calibrationStepDuration = calibrationStepDuration;
         this.drivetrain = drivetrain;
+        this.leftMotorStatistics = new DescriptiveStatistics(5);
+        this.rightMotorStatistics = new DescriptiveStatistics(5);
         addRequirements(drivetrain);
     }
 
@@ -67,8 +72,8 @@ public class DriveCalibration extends Command {
     /** Record the results of a voltage change to the dashboard */
     private void recordResults() {
         SmartDashboard.putString(dashboardMetricKey("phase"), calibrationPhase.name());
-        SmartDashboard.putNumber(dashboardMetricKey("targetVoltage"), getTargetVoltage().abs(Volts));
-        SmartDashboard.putNumber(dashboardMetricKey("voltage"), voltage.abs(Volts));
+        SmartDashboard.putNumber(dashboardMetricKey("targetVoltage"), getTargetVoltage().in(Volts));
+        SmartDashboard.putNumber(dashboardMetricKey("voltage"), voltage.in(Volts));
         SmartDashboard.putNumber(dashboardMetricKey("leftMotorRate"), drivetrain.getLeftEncoderRateAsDouble());
         SmartDashboard.putBoolean(dashboardMetricKey("leftMotorStaticFrictionOvercome"),
                 hasStaticFrictionBeenOvercome(drivetrain.getLeftEncoderRate()));
@@ -89,7 +94,7 @@ public class DriveCalibration extends Command {
         if (calibrationPhase == DriveCalibrationPhase.RampUp && voltage.gte(getTargetVoltage())) {
             calibrationPhase = DriveCalibrationPhase.RampDown;
         }
-        if (calibrationPhase == DriveCalibrationPhase.RampDown && voltage.lte(getTargetVoltage())) {
+        else if (calibrationPhase == DriveCalibrationPhase.RampDown && voltage.lte(getTargetVoltage())) {
             calibrationPhase = DriveCalibrationPhase.ReturnToZero;
         }
     }
@@ -110,13 +115,35 @@ public class DriveCalibration extends Command {
     }
 
     /**
+     * Determine if motor steady-state has been reached for a given motor step. This is useful
+     * because this calibration exercise currently is ignoring acceleration in the feed-forward
+     * model
+     */
+    private boolean motorsAtSteadyState() {
+        double leftMotorVelocity = drivetrain.getLeftEncoderRateAsDouble();
+        double rightMotorVelocity = drivetrain.getRightEncoderRateAsDouble();
+        double steadyStateTolerance = 0.2;
+        boolean leftMotorAtSteadyState = Math.abs(leftMotorVelocity - leftMotorStatistics.getMean()) < steadyStateTolerance;
+        boolean rightMotorAtSteadyState = Math.abs(rightMotorVelocity - rightMotorStatistics.getMean()) < steadyStateTolerance;
+        leftMotorStatistics.addValue(drivetrain.getLeftEncoderRateAsDouble());
+        rightMotorStatistics.addValue(drivetrain.getRightEncoderRateAsDouble());
+        return leftMotorAtSteadyState && rightMotorAtSteadyState;
+    }
+
+    /**
      * Run the calibration process. This involves slowly incresing motor values and
      * observing behavior and recording results for observation
      */
     @Override
     public void execute() {
         drivetrain.setMotorVoltage(voltage, voltage);
-        recordResults();
+        // Ensure we're at steady-state before recording measurements; this is being done
+        // to avoid needing to measure and calculate acceleration in this tuning exercise
+        // Acceleration is optional in the feed-forward model and will only be included
+        // if deemed necessary later
+        if (motorsAtSteadyState()) {
+            recordResults();
+        }
         prepareForNextCalibrationExecution();
     }
 

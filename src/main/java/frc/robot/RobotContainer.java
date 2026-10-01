@@ -78,7 +78,7 @@ public class RobotContainer {
     autonomousModeChooser.addOption("Auto Routine Time", new AutonomousTime(drivetrain));
     autonomousModeChooser.addOption("Auto Timed Drive Straight", new TestDriveStraightForTime(drivetrain));
     autonomousModeChooser.addOption("Drive Calibration",
-        new DriveCalibration(Volts.of(0.2), Duration.ofSeconds(1), drivetrain));
+        new DriveCalibration(Volts.of(0.5), Duration.ofSeconds(3), drivetrain));
     SmartDashboard.putData(autonomousModeChooser);
   }
 

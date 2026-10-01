@@ -31,4 +31,11 @@ public final class Constants {
     // quite that high to keep things the nominal safe range of voltage for the system. This also is the
     // max voltage the rechargable AA batteries can achieve
     public static final Voltage maxDrivetrainVoltage = Volts.of(7.2);
+    // Tuned feed-forward constants for the drivetrain motors
+    public static final double leftMotorFeedForwardKS = 0.22116918534099025;
+    public static final double leftMotorFeedForwardKV = 0.25495601690994146;
+    // public static final double rightMotorFeedForwardKS = 0.3836341408567267; // Calibrated
+    public static final double rightMotorFeedForwardKS = 0.30;
+    // public static final double rightMotorFeedForwardKV = 0.26307003145481433; // Calibrated
+    public static final double rightMotorFeedForwardKV = 0.258;
 }
