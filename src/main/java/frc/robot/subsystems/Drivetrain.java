@@ -49,8 +49,8 @@ public class Drivetrain extends SubsystemBase {
   // The PID controllers are used to account for differences in left/right motor
   // powers to allow automatic correction based on distances reported by the
   // encoders
-  private final PIDController leftMotorPID = new PIDController(0.2, 0.0, 0.0);
-  private final PIDController rightMotorPID = new PIDController(0.2, 0.0, 0.0);
+  private final PIDController leftMotorPID = new PIDController(Constants.drivetrainPidProportionalConstant, 0.0, 0.0);
+  private final PIDController rightMotorPID = new PIDController(Constants.drivetrainPidProportionalConstant, 0.0, 0.0);
 
   // Desired velocity measurements are useful to see how well the controllers are
   // matching
