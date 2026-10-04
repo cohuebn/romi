@@ -9,7 +9,7 @@ import edu.wpi.first.wpilibj.Preferences;
 public class RobotSettings {
     public static final String debugEnabledSetting = "debug";
     public static final String driveStraightTestDurationInSecondsSetting = "driveStraightTestDurationInSeconds";
-    private static double driveStraightTestDurationInSecondsDefault = 10;
+    private static double driveStraightTestDurationInSecondsDefault = 20;
     public static final String driveStraightTestVelocityPercentageSetting = "driveStraightTestVelocityPercentage";
     private static double driveStraightTestVelocityPercentageDefault = 0.5;
 

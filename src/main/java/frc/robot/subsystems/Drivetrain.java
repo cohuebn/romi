@@ -49,8 +49,12 @@ public class Drivetrain extends SubsystemBase {
   // The PID controllers are used to account for differences in left/right motor
   // powers to allow automatic correction based on distances reported by the
   // encoders
-  private final PIDController leftMotorPID = new PIDController(0.1, 0.0, 0.001);
-  private final PIDController rightMotorPID = new PIDController(0.1, 0.0, 0.001);
+  // The constants for kP and kD were derived using the Ziegler Nichols method for PID tuning
+  // via measured velocities and a separate Python project for analysis
+  // private final PIDController leftMotorPID = new PIDController(0.1525, 0.0, 0.0061);
+  private final PIDController leftMotorPID = new PIDController(0.07, 0.0, 0.0061);
+  // private final PIDController rightMotorPID = new PIDController(0.215, 0.0, 0.0089);
+  private final PIDController rightMotorPID = new PIDController(0.05, 0.0, 0.002);
 
   // Desired velocity measurements are useful to see how well the controllers are
   // matching
@@ -103,8 +107,10 @@ public class Drivetrain extends SubsystemBase {
     double rightMeasuredVelocity = rightEncoder.getRate();
 
     // PID calculates offsets between desired and actual velocities
-    double leftPIDCorrection = leftMotorPID.calculate(leftMeasuredVelocity, desiredLeftVelocity);
-    double rightPIDCorrection = rightMotorPID.calculate(rightMeasuredVelocity, desiredRightVelocity);
+    // double leftPIDCorrection = leftMotorPID.calculate(leftMeasuredVelocity, desiredLeftVelocity);
+    double leftPIDCorrection = 0;
+    // double rightPIDCorrection = rightMotorPID.calculate(rightMeasuredVelocity, desiredRightVelocity);
+    double rightPIDCorrection = 0;
 
     // Use the feed-forward to estimate volts needed to hit desired velocity; use
     // the PID correction to account for non-modeled voltage changes needed
