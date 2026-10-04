@@ -33,9 +33,10 @@ public final class Constants {
     public static final Voltage maxDrivetrainVoltage = Volts.of(7.2);
     // Tuned feed-forward constants for the drivetrain motors
     public static final double leftMotorFeedForwardKS = 0.22116918534099025;
-    public static final double leftMotorFeedForwardKV = 0.25495601690994146;
+    // public static final double leftMotorFeedForwardKV = 0.25495601690994146;
+    public static final double leftMotorFeedForwardKV = 0.2605;
     // public static final double rightMotorFeedForwardKS = 0.3836341408567267; // Calibrated
-    public static final double rightMotorFeedForwardKS = 0.30;
+    public static final double rightMotorFeedForwardKS = 0.35;
     // public static final double rightMotorFeedForwardKV = 0.26307003145481433; // Calibrated
-    public static final double rightMotorFeedForwardKV = 0.258;
+    public static final double rightMotorFeedForwardKV = 0.281;
 }
