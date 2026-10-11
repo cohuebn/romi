@@ -35,6 +35,6 @@ public final class Constants {
     public static final double leftMotorFeedForwardKS = 0.211;
     public static final double leftMotorFeedForwardKV = 0.2605;
     public static final double rightMotorFeedForwardKS = 0.295;
-    public static final double rightMotorFeedForwardKV = 0.275;
+    public static final double rightMotorFeedForwardKV = 0.265;
     public static final double drivetrainPidProportionalConstant = 0.2;
 }
