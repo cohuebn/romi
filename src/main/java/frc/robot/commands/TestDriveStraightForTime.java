@@ -4,7 +4,7 @@
 
 package frc.robot.commands;
 
-import frc.robot.Constants;
+import frc.robot.settings.Constants;
 import frc.robot.settings.RobotSettings;
 import frc.robot.subsystems.Drivetrain;
 import edu.wpi.first.units.measure.LinearVelocity;

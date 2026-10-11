@@ -10,7 +10,8 @@ import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
-import frc.robot.Constants;
+
+import frc.robot.settings.Constants;
 import frc.robot.subsystems.Drivetrain;
 
 enum DriveCalibrationPhase {
